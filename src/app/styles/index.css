@@ -1,0 +1,14 @@
+body {
+  background-color: rgb(116, 116, 116);
+  --margin: 10px;
+  box-sizing: border-box;
+  border-radius: 30px;
+  border: 2px skyblue dotted;
+  height: calc(100vh - 2 * var(--margin));
+  margin: var(--margin);
+  display: flex;
+}
+
+#root {
+  flex: 1;
+}
