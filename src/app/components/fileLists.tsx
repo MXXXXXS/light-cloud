@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import StatefulButton from "./statefulButton";
 import TransmissionState from "../share/buttonStates";
 import humanizeDuration from "humanize-duration";
+import { upLoadFile, upLoadLargeFile } from "../utils/fileHanlder";
 
 export default function FileLists({
   fileList,
@@ -54,7 +55,7 @@ function ProgressBar({
           display: flex;
           flex-direction: column;
           flex-basis: calc(100% - 100px);
-        /* 这是解决flex在文本溢出时, white-space: nowrap撑大container的问题 */
+          /* 这是解决flex在文本溢出时, white-space: nowrap撑大container的问题 */
           min-width: 0;
         }
         .progress {
@@ -81,7 +82,8 @@ function ProgressBar({
 }
 
 function Tile({ file, send = false }: { file: File; send: boolean }) {
-  const url = "http://localhost/upload";
+  const uploadURL = "http://localhost/upload";
+  const concatURL = "http://localhost/concat";
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [uploadingState, setUploadingState] = useState(
     TransmissionState.Initial
@@ -90,37 +92,50 @@ function Tile({ file, send = false }: { file: File; send: boolean }) {
   useEffect(() => {
     //"send": 全部启动信号, "uploadingState": 本组件自有控制逻辑
     const sendControl =
-      uploadingState === "ready" || (uploadingState === "initial" && send);
+      uploadingState === TransmissionState.Ready ||
+      (uploadingState === TransmissionState.Initial && send);
     if (sendControl) {
-      const startTime = Date.now();
-      //为了获取上传进度而使用xhr, 因为fetch目前无法获取上传进度
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", url + `?name=${file.name}`, true);
-      xhr.onreadystatechange = function() {
-        switch (xhr.readyState) {
-          case 4: {
-            setUploadingState(TransmissionState.Successed);
-            break;
-          }
-        }
-      };
-      xhr.upload.onprogress = function(e) {
-        if (e.lengthComputable) {
-          const ratio = e.loaded / e.total;
-          const timeElapsed = Date.now() - startTime;
+      upLoadLargeFile(
+        file,
+        uploadURL,
+        () => {
+          //通知服务器合并文件
+          fetch(concatURL + `?name=${file.name}`, {
+            method: "POST",
+            mode: "cors"
+          })
+            .then(res => {
+              console.log(`已经通知服务器合并文件`);
+              setUploadingState(TransmissionState.Successed);
+            })
+            .catch(err => {
+              console.log(`通知服务器合并文件失败`);
+              console.error(err);
+            });
+        },
+        ({ ratio, timeLeft }) => {
           setUploadingState(TransmissionState.Sending);
-          setProgressPercentage(ratio * 100);
-          setTimeLeft(timeElapsed / ratio - timeElapsed);
-        } else {
-          console.log("无法计算长度");
+          setProgressPercentage(ratio);
+          setTimeLeft(timeLeft);
         }
-      };
-      xhr.send(file);
+      );
+      // upLoadFile(
+      //   file,
+      //   uploadURL,
+      //   () => {
+      //     setUploadingState(TransmissionState.Successed);
+      //   },
+      //   ({ ratio, timeLeft }) => {
+      //     setUploadingState(TransmissionState.Sending);
+      //     setProgressPercentage(ratio);
+      //     setTimeLeft(timeLeft);
+      //   }
+      // );
     }
   }, [uploadingState, send]);
 
   const clickHanlder = useCallback(() => {
-    if (uploadingState === "initial") {
+    if (uploadingState === TransmissionState.Initial) {
       setUploadingState(TransmissionState.Ready);
     }
   }, [uploadingState]);
@@ -134,11 +149,7 @@ function Tile({ file, send = false }: { file: File; send: boolean }) {
           timeLeft={timeLeft}
         ></ProgressBar>
         <StatefulButton
-          state={
-            uploadingState !== TransmissionState.Initial
-              ? uploadingState
-              : TransmissionState.Ready
-          }
+          state={uploadingState}
           clickHanlder={clickHanlder}
         ></StatefulButton>
       </div>
