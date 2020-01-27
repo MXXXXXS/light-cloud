@@ -1,4 +1,4 @@
-function cleaver(file: File, size: number = 5 * 1024 * 1024) {
+function cleaver(file: File, size: number = 3 * 1024 * 1024) {
   if (file.size > size) {
     const fileParts: File[] = [];
     for (let i = 0; i < file.size; i += size) {

@@ -87,9 +87,16 @@ const router: Router = {
         res.set("Access-Control-Allow-Origin", "*");
         res.set("Access-Control-Allow-Headers", "*");
         res.set("Access-Control-Allow-Methods", "GET,POST,PUT");
-        res.status(202);
-        res.send();
-        collectFileParts(path.resolve(uploadDir, req.query.name));
+        collectFileParts(path.resolve(uploadDir, req.query.name))
+          .then(() => {
+            res.status(201);
+            res.send();
+          })
+          .catch(err => {
+            console.error(err);
+            res.status(500);
+            res.send();
+          });
       }
     },
     {

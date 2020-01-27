@@ -119,18 +119,6 @@ function Tile({ file, send = false }: { file: File; send: boolean }) {
           setTimeLeft(timeLeft);
         }
       );
-      // upLoadFile(
-      //   file,
-      //   uploadURL,
-      //   () => {
-      //     setUploadingState(TransmissionState.Successed);
-      //   },
-      //   ({ ratio, timeLeft }) => {
-      //     setUploadingState(TransmissionState.Sending);
-      //     setProgressPercentage(ratio);
-      //     setTimeLeft(timeLeft);
-      //   }
-      // );
     }
   }, [uploadingState, send]);
 
